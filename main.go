@@ -61,7 +61,6 @@ func verifySignature(signature string) bool {
 	mac := hmac.New(sha256.New, []byte(secretToken))
 	expectedMAC := mac.Sum(nil)
 	expectedSignature := "sha256=" + hex.EncodeToString(expectedMAC)
-	fmt.Println(signature, expectedSignature)
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
 }
 
