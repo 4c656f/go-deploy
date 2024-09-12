@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -43,8 +42,8 @@ func webhookHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Error parsing request: " + err.Error()})
 	}
 
-	if !verifySignature(c.GetHeader("X-Hub-Signature-256"), payload) {
-		c.JSON(401, gin.H{"error": "Invalid signature"})
+	if err := verifySignature(c.GetHeader("X-Hub-Signature-256"), payload); err != nil {
+		c.JSON(401, gin.H{"error": "Invalid signature: " + err.Error()})
 		return
 	}
 
