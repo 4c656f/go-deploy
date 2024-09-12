@@ -48,6 +48,8 @@ func webhookHandler(c *gin.Context) {
 		c.JSON(401, gin.H{"error": "Invalid signature: " + err.Error()})
 		return
 	}
+	
+	c.Request.Body = io.NopCloser(bytes.NewReader(bodyCopy.Bytes()))
 
 	var event struct {
 		Ref string `json:"ref"`
