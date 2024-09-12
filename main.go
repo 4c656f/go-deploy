@@ -47,15 +47,16 @@ func webhookHandler(c *gin.Context) {
 		return
 	}
 
+	
 	var event struct {
-		Ref string `json:"ref"`
+		ref string ""
 	}
 	if err := c.BindJSON(&event); err != nil {
 		c.JSON(400, gin.H{"error": "Error parsing JSON: " + err.Error()})
 		return
 	}
 
-	if event.Ref == "refs/heads/"+os.Getenv("GITHUB_BRANCH") {
+	if event.ref == "refs/heads/"+os.Getenv("GITHUB_BRANCH") {
 		go safeRunUpdateScript()
 		c.JSON(200, gin.H{"message": "Update process queued"})
 	} else {
