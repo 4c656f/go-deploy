@@ -14,6 +14,6 @@ else
 fi
 
 # Build and start the new services
-docker-compose up -d
+docker-compose up -d --force-recreate --no-deps
 
 echo "Update completed successfully"
