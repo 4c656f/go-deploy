@@ -14,6 +14,6 @@ else
 fi
 
 # Build and start the new services
-docker-compose up -d --build
+docker-compose up -d
 
 echo "Update completed successfully"
