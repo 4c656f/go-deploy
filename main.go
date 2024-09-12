@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
@@ -36,27 +37,28 @@ func main() {
 }
 
 func webhookHandler(c *gin.Context) {
-	payload, err := io.ReadAll(c.Request.Body)
+	bodyCopy := new(bytes.Buffer)
+	_, err := io.Copy(bodyCopy, c.Request.Body)
 
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Error parsing request: " + err.Error()})
 	}
 
-	if err := verifySignature(c.GetHeader("X-Hub-Signature-256"), payload); err != nil {
+	if err := verifySignature(c.GetHeader("X-Hub-Signature-256"), bodyCopy.Bytes()); err != nil {
 		c.JSON(401, gin.H{"error": "Invalid signature: " + err.Error()})
 		return
 	}
 
-	
 	var event struct {
-		ref string ""
+		Ref string `json:"ref"`
 	}
+
 	if err := c.BindJSON(&event); err != nil {
 		c.JSON(400, gin.H{"error": "Error parsing JSON: " + err.Error()})
 		return
 	}
 
-	if event.ref == "refs/heads/"+os.Getenv("GITHUB_BRANCH") {
+	if event.Ref == "refs/heads/"+os.Getenv("GITHUB_BRANCH") {
 		go safeRunUpdateScript()
 		c.JSON(200, gin.H{"message": "Update process queued"})
 	} else {
