@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"sync"
@@ -35,7 +36,13 @@ func main() {
 }
 
 func webhookHandler(c *gin.Context) {
-	if !verifySignature(c.GetHeader("X-Hub-Signature-256")) {
+	payload, err := io.ReadAll(c.Request.Body)
+	
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Error parsing request: " + err.Error()})
+	}
+	
+	if !verifySignature(c.GetHeader("X-Hub-Signature-256"), payload) {
 		c.JSON(401, gin.H{"error": "Invalid signature"})
 		return
 	}
@@ -56,9 +63,10 @@ func webhookHandler(c *gin.Context) {
 	}
 }
 
-func verifySignature(signature string) bool {
+func verifySignature(signature string, payload []byte) bool {
 	secretToken := os.Getenv("GITHUB_WEBHOOK_SECRET")
 	mac := hmac.New(sha256.New, []byte(secretToken))
+	mac.Write(payload)
 	expectedMAC := mac.Sum(nil)
 	expectedSignature := "sha256=" + hex.EncodeToString(expectedMAC)
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
