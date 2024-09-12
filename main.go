@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -37,11 +38,11 @@ func main() {
 
 func webhookHandler(c *gin.Context) {
 	payload, err := io.ReadAll(c.Request.Body)
-	
+
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Error parsing request: " + err.Error()})
 	}
-	
+
 	if !verifySignature(c.GetHeader("X-Hub-Signature-256"), payload) {
 		c.JSON(401, gin.H{"error": "Invalid signature"})
 		return
@@ -63,13 +64,37 @@ func webhookHandler(c *gin.Context) {
 	}
 }
 
-func verifySignature(signature string, payload []byte) bool {
-	secretToken := os.Getenv("GITHUB_WEBHOOK_SECRET")
-	mac := hmac.New(sha256.New, []byte(secretToken))
-	mac.Write(payload)
-	expectedMAC := mac.Sum(nil)
-	expectedSignature := "sha256=" + hex.EncodeToString(expectedMAC)
-	return hmac.Equal([]byte(signature), []byte(expectedSignature))
+func verifySignature(signature string, payload []byte) error {
+	signature_parts := strings.SplitN(signature, "=", 2)
+	if len(signature_parts) != 2 {
+		return fmt.Errorf("Invalid signature header: '%s' does not contain two parts (hash type and hash)", signature)
+	}
+
+	// Ensure secret is a sha1 hash
+	signature_type := signature_parts[0]
+	signature_hash := signature_parts[1]
+	if signature_type != "sha256" {
+		return fmt.Errorf("Signature should be a 'sha256' hash not '%s'", signature_type)
+	}
+	secret := os.Getenv("GITHUB_WEBHOOK_SECRET")
+	// Check that payload came from github
+	// skip check if empty secret provided
+	if !isValidPayload(secret, signature_hash, payload) {
+		return fmt.Errorf("Payload did not come from GitHub")
+	}
+
+	return nil
+}
+
+func isValidPayload(secret, signature string, payload []byte) bool {
+	hm := hmac.New(sha256.New, []byte(secret))
+	hm.Write(payload)
+	sum := hm.Sum(nil)
+	hash := fmt.Sprintf("%x", sum)
+	return hmac.Equal(
+		[]byte(hash),
+		[]byte(signature),
+	)
 }
 
 func safeRunUpdateScript() {
