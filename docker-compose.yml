@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - DEPLOY_DOMAIN=${DEPLOY_DOMAIN}
+      - SERVER_DOMAIN=${SERVER_DOMAIN}
